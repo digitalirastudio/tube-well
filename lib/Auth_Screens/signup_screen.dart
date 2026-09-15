@@ -1,7 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tube_well/Screens/signin_screen.dart';
+import 'package:tube_well/Auth_Screens/signin_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -24,7 +24,7 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Expense Tracker',
+          'Tube Well',
           style: TextStyle(color: Color(0xFF123B5D)),
         ),
       ),

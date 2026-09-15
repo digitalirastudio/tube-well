@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tube_well/Auth_Screens/signup_screen.dart';
 import 'package:tube_well/Screens/home_screen.dart';
-import 'package:tube_well/Screens/signup_screen.dart';
 
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
@@ -22,7 +22,7 @@ class _SigninScreenState extends State<SigninScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Expense Tracker',
+          'Tube Well',
           style: TextStyle(color: Color(0xFF123B5D)),
         ),
       ),

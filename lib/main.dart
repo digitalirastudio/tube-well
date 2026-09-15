@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-import 'package:tube_well/Screens/signup_screen.dart';
+import 'package:tube_well/Auth_Screens/splash_screen.dart';
 
 import 'firebase_options.dart';
 
@@ -20,7 +20,7 @@ class TubeWell extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Tube Well',
-      home: const SignupScreen(),
+      home: const SplashScreen(),
     );
   }
 }
