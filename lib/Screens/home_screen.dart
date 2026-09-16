@@ -5,6 +5,7 @@ import 'package:tube_well/Screens/profile_screen.dart';
 import 'package:tube_well/Screens/transaction_screen.dart';
 import 'package:tube_well/core/profile_avatar.dart';
 import 'package:tube_well/Screens/add_customer_screen.dart';
+import 'package:tube_well/Screens/customer_details.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -765,7 +766,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const CustomerDetailsScreen(),
+                            ),
+                          );
+                        },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(0, 0),

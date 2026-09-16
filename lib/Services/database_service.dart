@@ -42,6 +42,34 @@ class DatabaseService {
         );
   }
 
+  Future<void> addRun({
+    required DateTime date,
+    required DateTime startTime,
+    required DateTime endTime,
+    required int durationMinutes,
+    required double ratePerHour,
+    required double totalAmount,
+  }) async {
+    final runRef = userDatabase.child('runs').push();
+
+    await runRef
+        .set({
+          'date': date.toIso8601String(),
+          'startTime': startTime.toIso8601String(),
+          'endTime': endTime.toIso8601String(),
+          'durationMinutes': durationMinutes,
+          'ratePerHour': ratePerHour,
+          'totalAmount': totalAmount,
+          'createdAt': ServerValue.timestamp,
+        })
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+  }
+
   Future<void> testDatabaseConnection() async {
     final userDatabase = this.userDatabase;
 
