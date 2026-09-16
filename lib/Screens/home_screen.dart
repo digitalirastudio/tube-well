@@ -1,10 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tube_well/Auth_Screens/signin_screen.dart';
-import 'package:tube_well/Screens/add_person_screen.dart';
 import 'package:tube_well/Screens/profile_screen.dart';
 import 'package:tube_well/Screens/transaction_screen.dart';
 import 'package:tube_well/core/profile_avatar.dart';
+import 'package:tube_well/Screens/add_customer_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -867,7 +867,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AddPersonScreen()),
+            MaterialPageRoute(builder: (context) => const AddCustomerScreen()),
           );
         },
         backgroundColor: const Color(0xFF123B5D),

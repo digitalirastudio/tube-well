@@ -54,6 +54,7 @@ class DefaultFirebaseOptions {
     appId: '1:1057461099676:web:9fc8a7e9dfc6127a216159',
     messagingSenderId: '1057461099676',
     projectId: 'tube-well-ef1b0',
+    databaseURL: 'https://tube-well-ef1b0-default-rtdb.asia-southeast1.firebasedatabase.app',
     authDomain: 'tube-well-ef1b0.firebaseapp.com',
     storageBucket: 'tube-well-ef1b0.firebasestorage.app',
     measurementId: 'G-B8YG8JXTG3',
@@ -64,6 +65,7 @@ class DefaultFirebaseOptions {
     appId: '1:1057461099676:android:e58cee41ea7bd536216159',
     messagingSenderId: '1057461099676',
     projectId: 'tube-well-ef1b0',
+    databaseURL: 'https://tube-well-ef1b0-default-rtdb.firebaseio.com',
     storageBucket: 'tube-well-ef1b0.firebasestorage.app',
   );
 }
