@@ -38,6 +38,7 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
   firebase_auth: ^6.7.0
+  firebase_database: ^12.0.1
 
 dev_dependencies:
   flutter_test:
@@ -57,9 +58,11 @@ dev_dependencies:
 flutter:
 
   # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
+  # included with your application.
   uses-material-design: true
+
+  assets:
+    - assets/images/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
