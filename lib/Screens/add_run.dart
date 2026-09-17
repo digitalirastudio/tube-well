@@ -13,23 +13,57 @@ class AddRunScreen extends StatefulWidget {
     required this.customerId,
     required this.customerName,
   });
+
   @override
   State<AddRunScreen> createState() => _AddRunScreenState();
 }
 
 class _AddRunScreenState extends State<AddRunScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _rateController = TextEditingController(text: '1000');
+
+  double? _ratePerHour;
+  bool _isLoadingRate = true;
+  bool _isSaving = false;
 
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 30);
   TimeOfDay _endTime = const TimeOfDay(hour: 12, minute: 40);
-  bool _isSaving = false;
 
   @override
-  void dispose() {
-    _rateController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadCustomerRate();
+  }
+
+  Future<void> _loadCustomerRate() async {
+    try {
+      final customerData = await DatabaseService().getCustomer(
+        widget.customerId,
+      );
+
+      final rateValue = customerData['ratePerHour'];
+
+      final rate = rateValue is num
+          ? rateValue.toDouble()
+          : double.tryParse(rateValue.toString());
+
+      if (!mounted) return;
+
+      setState(() {
+        _ratePerHour = rate;
+        _isLoadingRate = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingRate = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to load customer rate: $error')),
+      );
+    }
   }
 
   DateTime _asDateTime(TimeOfDay time) => DateTime(
@@ -44,23 +78,40 @@ class _AddRunScreenState extends State<AddRunScreen> {
     var minutes = _asDateTime(_endTime)
         .difference(_asDateTime(_startTime))
         .inMinutes;
-    if (minutes <= 0) minutes += 24 * 60;
+
+    if (minutes <= 0) {
+      minutes += 24 * 60;
+    }
+
     return minutes;
   }
 
   double get _totalAmount {
-    final rate = double.tryParse(_rateController.text.trim()) ?? 0;
-    return rate * (_durationMinutes ~/ 60);
+    if (_ratePerHour == null) return 0;
+
+    final hours = _durationMinutes / 60;
+
+    return _ratePerHour! * hours;
   }
 
   String _formatTime(TimeOfDay time) => time.format(context);
 
   String _formatDate(DateTime date) =>
-      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/'
+      '${date.year}';
 
-  String _formatAmount(double amount) => amount == amount.roundToDouble()
-      ? amount.toStringAsFixed(0)
-      : amount.toStringAsFixed(2);
+  String _formatAmount(double amount) {
+    return amount == amount.roundToDouble()
+        ? amount.toStringAsFixed(0)
+        : amount.toStringAsFixed(2);
+  }
+
+  String _formatRate(double rate) {
+    return rate == rate.roundToDouble()
+        ? rate.toStringAsFixed(0)
+        : rate.toStringAsFixed(2);
+  }
 
   Future<void> _pickDate() async {
     final date = await showDatePicker(
@@ -69,7 +120,12 @@ class _AddRunScreenState extends State<AddRunScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (date != null) setState(() => _selectedDate = date);
+
+    if (date != null) {
+      setState(() {
+        _selectedDate = date;
+      });
+    }
   }
 
   Future<void> _pickTime({required bool isStart}) async {
@@ -77,7 +133,9 @@ class _AddRunScreenState extends State<AddRunScreen> {
       context: context,
       initialTime: isStart ? _startTime : _endTime,
     );
+
     if (time == null) return;
+
     setState(() {
       if (isStart) {
         _startTime = time;
@@ -90,6 +148,13 @@ class _AddRunScreenState extends State<AddRunScreen> {
   Future<void> _saveRun() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_ratePerHour == null || _ratePerHour! <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customer hourly rate is not available.')),
+      );
+      return;
+    }
+
     if (FirebaseAuth.instance.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('You must be signed in to save a run.')),
@@ -97,7 +162,10 @@ class _AddRunScreenState extends State<AddRunScreen> {
       return;
     }
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+    });
+
     try {
       await DatabaseService().addRun(
         customerId: widget.customerId,
@@ -105,13 +173,16 @@ class _AddRunScreenState extends State<AddRunScreen> {
         startTime: _asDateTime(_startTime),
         endTime: _asDateTime(_endTime),
         durationMinutes: _durationMinutes,
-        ratePerHour: double.tryParse(_rateController.text.trim()) ?? 0,
+        ratePerHour: _ratePerHour!,
         totalAmount: _totalAmount,
       );
+
       if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Run saved successfully.')));
+
       Navigator.pop(context);
     } on FirebaseException catch (error) {
       if (mounted) {
@@ -136,7 +207,11 @@ class _AddRunScreenState extends State<AddRunScreen> {
         ).showSnackBar(SnackBar(content: Text('Unable to save run: $error')));
       }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 
@@ -146,7 +221,10 @@ class _AddRunScreenState extends State<AddRunScreen> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      prefixIcon: Icon(icon, color: const Color(0xFF123B5D)),
+      prefixIcon: const Icon(
+        Icons.access_time_rounded,
+        color: Color(0xFF123B5D),
+      ),
       filled: true,
       fillColor: const Color.fromARGB(255, 245, 250, 253),
       border: OutlineInputBorder(
@@ -201,18 +279,107 @@ class _AddRunScreenState extends State<AddRunScreen> {
     );
   }
 
+  Widget _rateCard() {
+    const darkBlue = Color(0xFF123B5D);
+    const lightBlue = Color.fromARGB(255, 201, 232, 247);
+
+    if (_isLoadingRate) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: lightBlue.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Loading customer rate...',
+              style: TextStyle(color: darkBlue, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_ratePerHour == null || _ratePerHour! <= 0) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: Colors.red),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Customer hourly rate could not be loaded.',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: lightBlue.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.payments_outlined, color: darkBlue),
+          const SizedBox(width: 12),
+          const Text(
+            'Rate Per Hour',
+            style: TextStyle(
+              fontSize: 15,
+              color: darkBlue,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'Rs. ${_formatRate(_ratePerHour!)} / h',
+            style: const TextStyle(
+              fontSize: 17,
+              color: darkBlue,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const darkBlue = Color(0xFF123B5D);
     const lightBlue = Color.fromARGB(255, 201, 232, 247);
+
     final hours = _durationMinutes ~/ 60;
     final minutes = _durationMinutes % 60;
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: lightBlue,
-        foregroundColor: darkBlue,
+        backgroundColor: darkBlue,
+        foregroundColor: lightBlue,
         elevation: 0,
         title: const Text(
           'Add Run',
@@ -227,6 +394,24 @@ class _AddRunScreenState extends State<AddRunScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  widget.customerName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                const Text(
+                  'Customer Run',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+
+                const SizedBox(height: 25),
+
                 const Text(
                   'Date',
                   style: TextStyle(
@@ -235,7 +420,9 @@ class _AddRunScreenState extends State<AddRunScreen> {
                     color: darkBlue,
                   ),
                 ),
+
                 const SizedBox(height: 8),
+
                 InkWell(
                   onTap: _pickDate,
                   borderRadius: BorderRadius.circular(14),
@@ -250,7 +437,9 @@ class _AddRunScreenState extends State<AddRunScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 22),
+
                 Row(
                   children: [
                     _timeField(
@@ -266,7 +455,9 @@ class _AddRunScreenState extends State<AddRunScreen> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 28),
+
                 const Text(
                   'Calculation (Automatic)',
                   style: TextStyle(
@@ -275,49 +466,33 @@ class _AddRunScreenState extends State<AddRunScreen> {
                     color: darkBlue,
                   ),
                 ),
+
                 const SizedBox(height: 14),
+
                 _summaryRow(
                   'Total Time',
                   '$hours H and $minutes m (${_durationMinutes}m)',
                 ),
+
                 const SizedBox(height: 18),
+
+                _rateCard(),
+
+                const SizedBox(height: 18),
+
                 _summaryRow(
                   'Total Amount',
                   'Rs. ${_formatAmount(_totalAmount)}',
                   large: true,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Rate Rs. ${_rateController.text.trim()}/ h',
-                  style: TextStyle(
-                    color: darkBlue.withValues(alpha: 0.72),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _rateController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (_) => setState(() {}),
-                  decoration: _inputDecoration(
-                    hintText: 'Hourly rate',
-                    icon: Icons.payments_outlined,
-                  ),
-                  validator: (value) {
-                    final rate = double.tryParse(value?.trim() ?? '');
-                    return rate == null || rate <= 0
-                        ? 'Enter a valid hourly rate'
-                        : null;
-                  },
-                ),
+
                 const SizedBox(height: 30),
+
                 SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: _isSaving ? null : _saveRun,
+                    onPressed: _isSaving || _isLoadingRate ? null : _saveRun,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: darkBlue,
                       foregroundColor: lightBlue,
