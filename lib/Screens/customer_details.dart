@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:tube_well/Screens/add_run.dart';
+import 'package:tube_well/Screens/add_payment.dart';
 
 class CustomerDetailsScreen extends StatelessWidget {
+  final String customerId;
   final String customerName;
 
-  const CustomerDetailsScreen({super.key, this.customerName = 'Sara Malik'});
-
+  const CustomerDetailsScreen({
+    super.key,
+    required this.customerId,
+    required this.customerName,
+  });
   @override
   Widget build(BuildContext context) {
     const darkBlue = Color(0xFF123B5D);
@@ -94,7 +99,10 @@ class CustomerDetailsScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AddRunScreen(),
+                        builder: (context) => AddRunScreen(
+                          customerId: customerId,
+                          customerName: customerName,
+                        ),
                       ),
                     );
                   },
@@ -106,6 +114,37 @@ class CustomerDetailsScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: darkBlue,
                     foregroundColor: lightBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddPaymentScreen(
+                          customerId: customerId,
+                          customerName: customerName,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.payments_outlined),
+                  label: const Text(
+                    'Add Payment',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: lightBlue,
+                    foregroundColor: darkBlue,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),

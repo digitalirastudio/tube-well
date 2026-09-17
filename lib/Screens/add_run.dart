@@ -5,8 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:tube_well/Services/database_service.dart';
 
 class AddRunScreen extends StatefulWidget {
-  const AddRunScreen({super.key});
+  final String customerId;
+  final String customerName;
 
+  const AddRunScreen({
+    super.key,
+    required this.customerId,
+    required this.customerName,
+  });
   @override
   State<AddRunScreen> createState() => _AddRunScreenState();
 }
@@ -94,11 +100,12 @@ class _AddRunScreenState extends State<AddRunScreen> {
     setState(() => _isSaving = true);
     try {
       await DatabaseService().addRun(
+        customerId: widget.customerId,
         date: _selectedDate,
         startTime: _asDateTime(_startTime),
         endTime: _asDateTime(_endTime),
         durationMinutes: _durationMinutes,
-        ratePerHour: double.parse(_rateController.text.trim()),
+        ratePerHour: double.tryParse(_rateController.text.trim()) ?? 0,
         totalAmount: _totalAmount,
       );
       if (!mounted) return;

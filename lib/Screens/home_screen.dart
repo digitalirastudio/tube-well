@@ -6,6 +6,8 @@ import 'package:tube_well/Screens/transaction_screen.dart';
 import 'package:tube_well/core/profile_avatar.dart';
 import 'package:tube_well/Screens/add_customer_screen.dart';
 import 'package:tube_well/Screens/customer_details.dart';
+import 'package:tube_well/Services/database_service.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,11 +17,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _PeopleTile extends StatelessWidget {
+  final String customerId;
   final String name;
   final String amount;
   final String badge;
 
   const _PeopleTile({
+    required this.customerId,
     required this.name,
     required this.amount,
     required this.badge,
@@ -40,114 +44,105 @@ class _PeopleTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final badgeColor = _badgeColor();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: const Color(0xFF123B5D).withValues(alpha: 0.12),
-            child: Text(
-              name.substring(0, 1).toUpperCase(),
-              style: const TextStyle(
-                color: Color(0xFF123B5D),
-                fontWeight: FontWeight.bold,
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CustomerDetailsScreen(
+              customerId: customerId,
+              customerName: name,
+            ),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: const Color(0xFF123B5D).withValues(alpha: 0.12),
+              child: Text(
+                name.substring(0, 1).toUpperCase(),
+                style: const TextStyle(
+                  color: Color(0xFF123B5D),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF123B5D),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      amount,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF123B5D),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: badgeColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        badge,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: badgeColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 12,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                       color: Color(0xFF123B5D),
                     ),
-                    const SizedBox(width: 4),
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Last activity ',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF123B5D).withValues(alpha: 0.8),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          TextSpan(
-                            text: '•',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF123B5D).withValues(alpha: 0.8),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' Today',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF123B5D).withValues(alpha: 0.8),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        amount,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF123B5D),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          badge,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: badgeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time,
+                        size: 12,
+                        color: Color(0xFF123B5D),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Last activity • Today',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: const Color(0xFF123B5D).withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          const Icon(Icons.chevron_right, size: 22, color: Color(0xFF123B5D)),
-        ],
+            const SizedBox(width: 10),
+            const Icon(Icons.chevron_right, size: 22, color: Color(0xFF123B5D)),
+          ],
+        ),
       ),
     );
   }
@@ -767,13 +762,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const CustomerDetailsScreen(),
-                            ),
-                          );
+                          // Customer list is now shown below.
                         },
                         style: TextButton.styleFrom(
                           padding: EdgeInsets.zero,
@@ -793,79 +782,94 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xFF123B5D).withValues(alpha: 0.08),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF123B5D).withValues(alpha: 0.06),
-                        blurRadius: 12,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: _PeopleTile(
-                    name: 'Aisha Khan',
-                    amount: 'Rs 3200',
-                    badge: 'Active',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xFF123B5D).withValues(alpha: 0.08),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF123B5D).withValues(alpha: 0.06),
-                        blurRadius: 12,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: _PeopleTile(
-                    name: 'Bilal Ahmed',
-                    amount: 'Rs 1850',
-                    badge: 'Due',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: const Color(0xFF123B5D).withValues(alpha: 0.08),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF123B5D).withValues(alpha: 0.06),
-                        blurRadius: 12,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: _PeopleTile(
-                    name: 'Sara Malik',
-                    amount: 'Rs 4200',
-                    badge: 'Paid',
-                  ),
+                StreamBuilder<DatabaseEvent>(
+                  stream: DatabaseService().userDatabase
+                      .child('customers')
+                      .onValue,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Center(
+                          child: Text(
+                            'Unable to load customers.',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final data = snapshot.data?.snapshot.value;
+
+                    if (data == null) {
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'No customers added yet.',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final customers = Map<String, dynamic>.from(data as Map);
+
+                    return Column(
+                      children: customers.entries.map((entry) {
+                        final customerId = entry.key;
+                        final customer = Map<String, dynamic>.from(
+                          entry.value as Map,
+                        );
+
+                        final name =
+                            customer['name']?.toString() ?? 'Unknown Customer';
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: const Color(0xFF123B5D)
+                                    .withValues(alpha: 0.08),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF123B5D)
+                                      .withValues(alpha: 0.06),
+                                  blurRadius: 12,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: _PeopleTile(
+                              customerId: customerId,
+                              name: name,
+                              amount: 'Rs 0',
+                              badge: 'Active',
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
                 ),
               ],
             ),
