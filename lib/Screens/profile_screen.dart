@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:tube_well/Screens/customers_screen.dart';
+import 'package:tube_well/Screens/home_screen.dart';
+import 'package:tube_well/Screens/transaction_screen.dart';
 import 'package:tube_well/core/profile_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -18,6 +21,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String getUserEmail() {
     final email = FirebaseAuth.instance.currentUser?.email?.trim();
     return (email != null && email.isNotEmpty) ? email : 'No email found';
+  }
+
+  void _navigateToTab(int index) {
+    final screens = [
+      const HomeScreen(),
+      const TransactionScreen(),
+      const CustomersScreen(),
+      const ProfileScreen(),
+    ];
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => screens[index]),
+    );
+  }
+
+  Widget _bottomNavItem({
+    required IconData icon,
+    required String label,
+    required bool active,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 24,
+            color: active ? const Color(0xFF123B5D) : Colors.grey,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: active ? const Color(0xFF123B5D) : Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -153,6 +199,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            GestureDetector(
+              onTap: () => _navigateToTab(0),
+              child: _bottomNavItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                active: false,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _navigateToTab(1),
+              child: _bottomNavItem(
+                icon: Icons.swap_horiz_rounded,
+                label: 'Transactions',
+                active: false,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _navigateToTab(2),
+              child: _bottomNavItem(
+                icon: Icons.people_rounded,
+                label: 'Customers',
+                active: false,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _navigateToTab(3),
+              child: _bottomNavItem(
+                icon: Icons.person_rounded,
+                label: 'Profile',
+                active: true,
+              ),
+            ),
+          ],
         ),
       ),
     );

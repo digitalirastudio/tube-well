@@ -245,4 +245,288 @@ class DatabaseService {
 
     return payments;
   }
+
+  Future<List<Map<String, dynamic>>> getCustomers() async {
+    final snapshot = await userDatabase
+        .child('customers')
+        .get()
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+
+    if (!snapshot.exists || snapshot.value == null) {
+      return [];
+    }
+
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+
+    final customers = <Map<String, dynamic>>[];
+
+    for (final entry in data.entries) {
+      final customer = Map<String, dynamic>.from(entry.value as Map);
+
+      double totalRuns = 0;
+      double totalPayments = 0;
+
+      // Calculate total run amount
+      if (customer['runs'] != null) {
+        final runs = Map<String, dynamic>.from(customer['runs'] as Map);
+
+        for (final run in runs.values) {
+          final runData = Map<String, dynamic>.from(run as Map);
+
+          totalRuns += (runData['totalAmount'] as num?)?.toDouble() ?? 0;
+        }
+      }
+
+      // Calculate total payments
+      if (customer['payments'] != null) {
+        final payments = Map<String, dynamic>.from(customer['payments'] as Map);
+
+        for (final payment in payments.values) {
+          final paymentData = Map<String, dynamic>.from(payment as Map);
+
+          totalPayments += (paymentData['amount'] as num?)?.toDouble() ?? 0;
+        }
+      }
+
+      final owed = totalRuns - totalPayments;
+
+      customer['id'] = entry.key;
+      customer['totalRuns'] = totalRuns;
+      customer['totalPayments'] = totalPayments;
+      customer['owed'] = owed < 0 ? 0 : owed;
+
+      customers.add(customer);
+    }
+
+    customers.sort((a, b) {
+      final nameA = a['name']?.toString().toLowerCase() ?? '';
+      final nameB = b['name']?.toString().toLowerCase() ?? '';
+
+      return nameA.compareTo(nameB);
+    });
+
+    return customers;
+  }
+
+  Future<Map<String, dynamic>> getThisMonthSummary() async {
+    final snapshot = await userDatabase
+        .child('customers')
+        .get()
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+
+    if (!snapshot.exists || snapshot.value == null) {
+      return {
+        'outstanding': 0.0,
+        'people': 0,
+        'usageRecords': 0,
+        'payments': 0,
+      };
+    }
+
+    final customers = Map<String, dynamic>.from(snapshot.value as Map);
+
+    final now = DateTime.now();
+
+    final monthStart = DateTime(now.year, now.month, 1);
+    final nextMonthStart = DateTime(now.year, now.month + 1, 1);
+
+    double totalRuns = 0;
+    double totalPayments = 0;
+
+    int usageRecords = 0;
+    int paymentRecords = 0;
+
+    final Set<String> peopleWithOutstanding = {};
+
+    for (final customerEntry in customers.entries) {
+      final customerId = customerEntry.key;
+      final customer = Map<String, dynamic>.from(customerEntry.value as Map);
+
+      double customerRuns = 0;
+      double customerPayments = 0;
+
+      // -------------------------
+      // THIS MONTH'S RUNS
+      // -------------------------
+      final runsData = customer['runs'];
+
+      if (runsData != null) {
+        final runs = Map<String, dynamic>.from(runsData as Map);
+
+        for (final runEntry in runs.entries) {
+          final run = Map<String, dynamic>.from(runEntry.value as Map);
+
+          final date = DateTime.tryParse(run['date']?.toString() ?? '');
+
+          if (date == null) continue;
+
+          if (!date.isBefore(monthStart) && date.isBefore(nextMonthStart)) {
+            final amount = (run['totalAmount'] as num?)?.toDouble() ?? 0;
+
+            customerRuns += amount;
+            totalRuns += amount;
+            usageRecords++;
+          }
+        }
+      }
+
+      // -------------------------
+      // THIS MONTH'S PAYMENTS
+      // -------------------------
+      final paymentsData = customer['payments'];
+
+      if (paymentsData != null) {
+        final payments = Map<String, dynamic>.from(paymentsData as Map);
+
+        for (final paymentEntry in payments.entries) {
+          final payment = Map<String, dynamic>.from(paymentEntry.value as Map);
+
+          final date = DateTime.tryParse(payment['date']?.toString() ?? '');
+
+          if (date == null) continue;
+
+          if (!date.isBefore(monthStart) && date.isBefore(nextMonthStart)) {
+            final amount = (payment['amount'] as num?)?.toDouble() ?? 0;
+
+            customerPayments += amount;
+            totalPayments += amount;
+            paymentRecords++;
+          }
+        }
+      }
+
+      // This customer's remaining amount
+      final customerOutstanding = customerRuns - customerPayments;
+
+      if (customerOutstanding > 0) {
+        peopleWithOutstanding.add(customerId);
+      }
+    }
+
+    final outstanding = totalRuns - totalPayments;
+
+    return {
+      'outstanding': outstanding > 0 ? outstanding : 0.0,
+      'people': peopleWithOutstanding.length,
+      'usageRecords': usageRecords,
+      'payments': paymentRecords,
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> getAllTransactions() async {
+    final snapshot = await userDatabase
+        .child('customers')
+        .get()
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+
+    if (!snapshot.exists || snapshot.value == null) {
+      return [];
+    }
+
+    final customers = Map<String, dynamic>.from(snapshot.value as Map);
+
+    final List<Map<String, dynamic>> transactions = [];
+
+    for (final customerEntry in customers.entries) {
+      final customerId = customerEntry.key;
+
+      final customer = Map<String, dynamic>.from(customerEntry.value as Map);
+
+      final customerName = customer['name']?.toString() ?? 'Unknown Customer';
+
+      // -------------------------
+      // RUNS
+      // -------------------------
+      final runsData = customer['runs'];
+
+      if (runsData != null) {
+        final runs = Map<String, dynamic>.from(runsData as Map);
+
+        for (final runEntry in runs.entries) {
+          final run = Map<String, dynamic>.from(runEntry.value as Map);
+
+          final parsedDate = DateTime.tryParse(run['date']?.toString() ?? '');
+
+          if (parsedDate == null) continue;
+
+          final date = DateTime(
+            parsedDate.year,
+            parsedDate.month,
+            parsedDate.day,
+          );
+
+          transactions.add({
+            'id': runEntry.key,
+            'customerId': customerId,
+            'customerName': customerName,
+            'type': 'run',
+            'date': date,
+            'startTime': DateTime.tryParse(run['startTime']?.toString() ?? ''),
+            'endTime': DateTime.tryParse(run['endTime']?.toString() ?? ''),
+            'amount': (run['totalAmount'] as num?)?.toDouble() ?? 0,
+          });
+        }
+      }
+
+      // -------------------------
+      // PAYMENTS
+      // -------------------------
+      final paymentsData = customer['payments'];
+
+      if (paymentsData != null) {
+        final payments = Map<String, dynamic>.from(paymentsData as Map);
+
+        for (final paymentEntry in payments.entries) {
+          final payment = Map<String, dynamic>.from(paymentEntry.value as Map);
+
+          final parsedDate = DateTime.tryParse(
+            payment['date']?.toString() ?? '',
+          );
+
+          if (parsedDate == null) continue;
+
+          final date = DateTime(
+            parsedDate.year,
+            parsedDate.month,
+            parsedDate.day,
+          );
+
+          transactions.add({
+            'id': paymentEntry.key,
+            'customerId': customerId,
+            'customerName': customerName,
+            'type': 'payment',
+            'date': date,
+            'amount': (payment['amount'] as num?)?.toDouble() ?? 0,
+            'note': payment['note']?.toString() ?? '',
+          });
+        }
+      }
+    }
+
+    // Newest transactions first
+    transactions.sort((a, b) {
+      final aDate = a['date'] as DateTime;
+      final bDate = b['date'] as DateTime;
+
+      return bDate.compareTo(aDate);
+    });
+
+    return transactions;
+  }
 }
