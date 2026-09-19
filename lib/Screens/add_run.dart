@@ -7,12 +7,16 @@ import 'package:tube_well/Services/database_service.dart';
 class AddRunScreen extends StatefulWidget {
   final String customerId;
   final String customerName;
+  final Map<String, dynamic>? run;
 
   const AddRunScreen({
     super.key,
     required this.customerId,
     required this.customerName,
+    this.run,
   });
+
+  bool get isEditMode => run != null;
 
   @override
   State<AddRunScreen> createState() => _AddRunScreenState();
@@ -32,6 +36,34 @@ class _AddRunScreenState extends State<AddRunScreen> {
   @override
   void initState() {
     super.initState();
+
+    if (widget.run != null) {
+      final run = widget.run!;
+
+      final runDate = DateTime.tryParse(run['date']?.toString() ?? '');
+      if (runDate != null) {
+        _selectedDate = runDate;
+      }
+
+      final startTimeValue = DateTime.tryParse(
+        run['startTime']?.toString() ?? '',
+      );
+      if (startTimeValue != null) {
+        _startTime = TimeOfDay(
+          hour: startTimeValue.hour,
+          minute: startTimeValue.minute,
+        );
+      }
+
+      final endTimeValue = DateTime.tryParse(run['endTime']?.toString() ?? '');
+      if (endTimeValue != null) {
+        _endTime = TimeOfDay(
+          hour: endTimeValue.hour,
+          minute: endTimeValue.minute,
+        );
+      }
+    }
+
     _loadCustomerRate();
   }
 
@@ -167,21 +199,46 @@ class _AddRunScreenState extends State<AddRunScreen> {
     });
 
     try {
-      await DatabaseService().addRun(
-        customerId: widget.customerId,
-        date: _selectedDate,
-        startTime: _asDateTime(_startTime),
-        endTime: _asDateTime(_endTime),
-        durationMinutes: _durationMinutes,
-        ratePerHour: _ratePerHour!,
-        totalAmount: _totalAmount,
-      );
+      final runId = widget.run?['id']?.toString();
+
+      if (widget.isEditMode) {
+        if (runId == null || runId.isEmpty) {
+          throw Exception('Run ID is missing.');
+        }
+
+        await DatabaseService().updateRun(
+          customerId: widget.customerId,
+          runId: runId,
+          date: _selectedDate,
+          startTime: _asDateTime(_startTime),
+          endTime: _asDateTime(_endTime),
+          durationMinutes: _durationMinutes,
+          ratePerHour: _ratePerHour!,
+          totalAmount: _totalAmount,
+        );
+      } else {
+        await DatabaseService().addRun(
+          customerId: widget.customerId,
+          date: _selectedDate,
+          startTime: _asDateTime(_startTime),
+          endTime: _asDateTime(_endTime),
+          durationMinutes: _durationMinutes,
+          ratePerHour: _ratePerHour!,
+          totalAmount: _totalAmount,
+        );
+      }
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Run saved successfully.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEditMode
+                ? 'Run updated successfully.'
+                : 'Run saved successfully.',
+          ),
+        ),
+      );
 
       Navigator.pop(context);
     } on FirebaseException catch (error) {
@@ -381,9 +438,9 @@ class _AddRunScreenState extends State<AddRunScreen> {
         backgroundColor: darkBlue,
         foregroundColor: lightBlue,
         elevation: 0,
-        title: const Text(
-          'Add Run',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          widget.isEditMode ? 'Edit Run' : 'Add Run',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -507,9 +564,9 @@ class _AddRunScreenState extends State<AddRunScreen> {
                             height: 24,
                             child: CircularProgressIndicator(strokeWidth: 2.5),
                           )
-                        : const Text(
-                            'Save Run',
-                            style: TextStyle(
+                        : Text(
+                            widget.isEditMode ? 'Save Changes' : 'Save Run',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),

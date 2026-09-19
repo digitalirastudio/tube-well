@@ -6,11 +6,17 @@ class AddPaymentScreen extends StatefulWidget {
   final String customerId;
   final String customerName;
 
+  // If payment is provided, this screen works in Edit mode.
+  final Map<String, dynamic>? payment;
+
   const AddPaymentScreen({
     super.key,
     required this.customerId,
     required this.customerName,
+    this.payment,
   });
+
+  bool get isEditMode => payment != null;
 
   @override
   State<AddPaymentScreen> createState() => _AddPaymentScreenState();
@@ -19,10 +25,7 @@ class AddPaymentScreen extends StatefulWidget {
 class _AddPaymentScreenState extends State<AddPaymentScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _customerController = TextEditingController();
-
   final TextEditingController _amountController = TextEditingController();
-
   final TextEditingController _noteController = TextEditingController();
 
   final DatabaseService _databaseService = DatabaseService();
@@ -32,8 +35,26 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
   bool _isSaving = false;
 
   @override
+  void initState() {
+    super.initState();
+
+    if (widget.payment != null) {
+      final payment = widget.payment!;
+
+      _amountController.text = payment['amount']?.toString() ?? '';
+
+      _noteController.text = payment['note']?.toString() ?? '';
+
+      final paymentDate = DateTime.tryParse(payment['date']?.toString() ?? '');
+
+      if (paymentDate != null) {
+        _selectedDate = paymentDate;
+      }
+    }
+  }
+
+  @override
   void dispose() {
-    _customerController.dispose();
     _amountController.dispose();
     _noteController.dispose();
     super.dispose();
@@ -73,26 +94,55 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
     });
 
     try {
-      await _databaseService.addPayment(
-        customerId: widget.customerId,
-        customerName: widget.customerName,
-        amount: amount,
-        date: _selectedDate,
-        note: _noteController.text,
-      );
+      if (widget.isEditMode) {
+        final paymentId = widget.payment!['id']?.toString();
+
+        if (paymentId == null || paymentId.isEmpty) {
+          throw Exception('Payment ID is missing.');
+        }
+
+        await _databaseService.updatePayment(
+          customerId: widget.customerId,
+          paymentId: paymentId,
+          amount: amount,
+          date: _selectedDate,
+          note: _noteController.text,
+        );
+      } else {
+        await _databaseService.addPayment(
+          customerId: widget.customerId,
+          customerName: widget.customerName,
+          amount: amount,
+          date: _selectedDate,
+          note: _noteController.text,
+        );
+      }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment saved successfully.')),
+        SnackBar(
+          content: Text(
+            widget.isEditMode
+                ? 'Payment updated successfully.'
+                : 'Payment saved successfully.',
+          ),
+        ),
       );
 
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to save payment: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEditMode
+                ? 'Failed to update payment: $e'
+                : 'Failed to save payment: $e',
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -107,12 +157,14 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
     const primaryColor = Color(0xFF123B5D);
     const backgroundColor = Color.fromARGB(255, 201, 232, 247);
 
+    final isEdit = widget.isEditMode;
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Add Payment',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          isEdit ? 'Edit Payment' : 'Add Payment',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
@@ -125,9 +177,9 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Record Payment',
-                  style: TextStyle(
+                Text(
+                  isEdit ? 'Edit Payment' : 'Record Payment',
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: primaryColor,
@@ -136,9 +188,11 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
 
                 const SizedBox(height: 8),
 
-                const Text(
-                  'Enter the payment received from the customer.',
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                Text(
+                  isEdit
+                      ? 'Update the payment details.'
+                      : 'Enter the payment received from the customer.',
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
 
                 const SizedBox(height: 25),
@@ -152,10 +206,7 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.person_outline,
-                        color: Color(0xFF123B5D),
-                      ),
+                      const Icon(Icons.person_outline, color: primaryColor),
                       const SizedBox(width: 14),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +224,7 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF123B5D),
+                              color: primaryColor,
                             ),
                           ),
                         ],
@@ -315,9 +366,9 @@ class _AddPaymentScreenState extends State<AddPaymentScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Save Payment',
-                            style: TextStyle(
+                        : Text(
+                            isEdit ? 'Update Payment' : 'Save Payment',
+                            style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
                             ),

@@ -75,6 +75,53 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
     }
   }
 
+  Future<void> _confirmDeleteCustomer() async {
+    final name = _customerData?['name']?.toString() ?? widget.customerName;
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete customer?'),
+        content: Text(
+          'Delete $name and all of their runs and payments?\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) {
+      return;
+    }
+
+    try {
+      await DatabaseService().deleteCustomer(customerId: widget.customerId);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customer deleted successfully.')),
+      );
+
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to delete customer: $error')),
+      );
+    }
+  }
+
   Future<void> _openAddRun() async {
     await Navigator.push(
       context,
@@ -222,6 +269,74 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
     return _getTotalCharges() - _getTotalPaid();
   }
 
+  Future<void> _deletePayment(Map<String, dynamic> payment) async {
+    final paymentId = payment['id']?.toString();
+
+    if (paymentId == null || paymentId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to delete this payment.')),
+      );
+      return;
+    }
+
+    try {
+      await DatabaseService().deletePayment(
+        customerId: widget.customerId,
+        paymentId: paymentId,
+      );
+
+      if (!mounted) return;
+
+      await _loadCustomer();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment deleted successfully.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to delete payment: $error')),
+      );
+    }
+  }
+
+  Future<void> _deleteRun(Map<String, dynamic> run) async {
+    final runId = run['id']?.toString();
+
+    if (runId == null || runId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to delete this run.')),
+      );
+      return;
+    }
+
+    try {
+      await DatabaseService().deleteRun(
+        customerId: widget.customerId,
+        runId: runId,
+      );
+
+      if (!mounted) return;
+
+      await _loadCustomer();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Run deleted successfully.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to delete run: $error')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const darkBlue = Color(0xFF123B5D);
@@ -248,6 +363,11 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
             onPressed: _isLoading ? null : _openUpdateCustomer,
             icon: const Icon(Icons.edit_rounded),
             tooltip: 'Update Customer',
+          ),
+          IconButton(
+            onPressed: _isLoading ? null : _confirmDeleteCustomer,
+            icon: const Icon(Icons.delete_outline_rounded),
+            tooltip: 'Delete Customer',
           ),
         ],
       ),
@@ -478,97 +598,202 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
   Widget _runCard(Map<String, dynamic> run) {
     const darkBlue = Color(0xFF123B5D);
     const lightBlue = Color.fromARGB(255, 201, 232, 247);
+    const red = Color(0xFFE53935);
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 245, 250, 253),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: lightBlue),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: lightBlue,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.water_drop_rounded,
-                  color: darkBlue,
-                  size: 20,
-                ),
+    return Dismissible(
+      key: ValueKey(run['id'] ?? '${run['date']}-${run['totalAmount']}'),
+      direction: DismissDirection.horizontal,
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: lightBlue,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.edit_rounded, color: darkBlue, size: 24),
+            SizedBox(width: 10),
+            Text(
+              'Edit',
+              style: TextStyle(
+                color: darkBlue,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  _formatDate(run['date']),
+            ),
+          ],
+        ),
+      ),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: red,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            SizedBox(width: 10),
+            Icon(Icons.delete_forever_rounded, color: Colors.white, size: 24),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddRunScreen(
+                customerId: widget.customerId,
+                customerName:
+                    _customerData?['name']?.toString() ?? widget.customerName,
+                run: run,
+              ),
+            ),
+          );
+
+          if (mounted) {
+            await _loadCustomer();
+          }
+
+          return false;
+        }
+
+        if (direction == DismissDirection.endToStart) {
+          final shouldDelete = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete run?'),
+              content: Text(
+                'Remove this run on ${_formatDate(run['date'])} from ${widget.customerName}?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldDelete != true) {
+            return false;
+          }
+
+          await _deleteRun(run);
+
+          return true;
+        }
+
+        return false;
+      },
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 245, 250, 253),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: lightBlue),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: lightBlue,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.water_drop_rounded,
+                    color: darkBlue,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _formatDate(run['date']),
+                    style: const TextStyle(
+                      color: darkBlue,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatAmount(run['totalAmount']),
                   style: const TextStyle(
                     color: darkBlue,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              Text(
-                _formatAmount(run['totalAmount']),
-                style: const TextStyle(
-                  color: darkBlue,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
 
-          const SizedBox(height: 14),
+            const SizedBox(height: 14),
 
-          Row(
-            children: [
-              Expanded(
-                child: _runInfo(
-                  icon: Icons.play_arrow_rounded,
-                  label: 'From',
-                  value: _formatTime(run['startTime']),
+            Row(
+              children: [
+                Expanded(
+                  child: _runInfo(
+                    icon: Icons.play_arrow_rounded,
+                    label: 'From',
+                    value: _formatTime(run['startTime']),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _runInfo(
-                  icon: Icons.stop_rounded,
-                  label: 'To',
-                  value: _formatTime(run['endTime']),
+                Expanded(
+                  child: _runInfo(
+                    icon: Icons.stop_rounded,
+                    label: 'To',
+                    value: _formatTime(run['endTime']),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
 
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          Row(
-            children: [
-              Expanded(
-                child: _runInfo(
-                  icon: Icons.timer_outlined,
-                  label: 'Duration',
-                  value: _formatDuration(run['durationMinutes']),
+            Row(
+              children: [
+                Expanded(
+                  child: _runInfo(
+                    icon: Icons.timer_outlined,
+                    label: 'Duration',
+                    value: _formatDuration(run['durationMinutes']),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _runInfo(
-                  icon: Icons.payments_outlined,
-                  label: 'Rate',
-                  value: _formatRate(run['ratePerHour']),
+                Expanded(
+                  child: _runInfo(
+                    icon: Icons.payments_outlined,
+                    label: 'Rate',
+                    value: _formatRate(run['ratePerHour']),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -734,74 +959,202 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
   Widget _paymentCard(Map<String, dynamic> payment) {
     const darkBlue = Color(0xFF123B5D);
     const lightBlue = Color.fromARGB(255, 201, 232, 247);
+    const red = Color(0xFFE53935);
 
     final amount = _formatAmount(payment['amount']);
     final date = _formatDate(payment['date']);
     final note = payment['note']?.toString() ?? '';
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 245, 250, 253),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: lightBlue),
+    return Dismissible(
+      key: ValueKey(payment['id'] ?? '${payment['date']}-${payment['amount']}'),
+
+      // Allow both directions.
+      direction: DismissDirection.horizontal,
+
+      // Swipe RIGHT → EDIT
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: lightBlue,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.edit_rounded, color: darkBlue, size: 24),
+            SizedBox(width: 10),
+            Text(
+              'Edit',
+              style: TextStyle(
+                color: darkBlue,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: lightBlue,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.payments_outlined,
-              color: darkBlue,
-              size: 20,
-            ),
-          ),
 
-          const SizedBox(width: 12),
+      // Swipe LEFT → DELETE
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: red,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            SizedBox(width: 10),
+            Icon(Icons.delete_forever_rounded, color: Colors.white, size: 24),
+          ],
+        ),
+      ),
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Paid',
-                  style: const TextStyle(
-                    color: darkBlue,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
+      confirmDismiss: (direction) async {
+        // ==========================================
+        // SWIPE RIGHT → OPEN EDIT PAYMENT
+        // ==========================================
+        if (direction == DismissDirection.startToEnd) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddPaymentScreen(
+                customerId: widget.customerId,
+                customerName:
+                    _customerData?['name']?.toString() ?? widget.customerName,
+                payment: payment,
+              ),
+            ),
+          );
+
+          // Refresh payment history and balance.
+          if (mounted) {
+            await _loadCustomer();
+          }
+
+          // Do NOT remove the card.
+          return false;
+        }
+
+        // ==========================================
+        // SWIPE LEFT → DELETE PAYMENT
+        // ==========================================
+        if (direction == DismissDirection.endToStart) {
+          final shouldDelete = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete payment?'),
+              content: Text(
+                'Remove this payment of $amount from ${widget.customerName}?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: const Text('Cancel'),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  date,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text('Delete'),
                 ),
-                if (note.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    note,
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
               ],
             ),
-          ),
+          );
 
-          Text(
-            '-$amount',
-            style: const TextStyle(
-              color: darkBlue,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          if (shouldDelete != true) {
+            return false;
+          }
+
+          await _deletePayment(payment);
+
+          return true;
+        }
+
+        return false;
+      },
+
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 245, 250, 253),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: lightBlue),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: lightBlue,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.payments_outlined,
+                color: darkBlue,
+                size: 20,
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Paid',
+                    style: TextStyle(
+                      color: darkBlue,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    date,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+
+                  if (note.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      note,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            Text(
+              '-$amount',
+              style: const TextStyle(
+                color: darkBlue,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

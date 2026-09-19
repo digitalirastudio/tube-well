@@ -18,6 +18,23 @@ class DatabaseService {
     return _database.child('users').child(user.uid);
   }
 
+  Future<void> deleteUserData(String uid) async {
+    if (uid.trim().isEmpty) {
+      throw Exception('User ID is required.');
+    }
+
+    await _database
+        .child('users')
+        .child(uid)
+        .remove()
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+  }
+
   Future<String> addCustomer({
     required String name,
     required String mobileNumber,
@@ -82,6 +99,23 @@ class DatabaseService {
           'ratePerHour': ratePerHour,
           'note': note.trim(),
         })
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+  }
+
+  Future<void> deleteCustomer({required String customerId}) async {
+    if (customerId.trim().isEmpty) {
+      throw Exception('Customer ID is required.');
+    }
+
+    await userDatabase
+        .child('customers')
+        .child(customerId)
+        .remove()
         .timeout(
           const Duration(seconds: 15),
           onTimeout: () => throw TimeoutException(
@@ -189,6 +223,114 @@ class DatabaseService {
           'note': note.trim(),
           'createdAt': ServerValue.timestamp,
         })
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+  }
+
+  Future<void> updatePayment({
+    required String customerId,
+    required String paymentId,
+    required double amount,
+    required DateTime date,
+    required String note,
+  }) async {
+    if (paymentId.trim().isEmpty) {
+      throw Exception('Payment ID is required to update a payment.');
+    }
+
+    await userDatabase
+        .child('customers')
+        .child(customerId)
+        .child('payments')
+        .child(paymentId)
+        .update({
+          'amount': amount,
+          'date': date.toIso8601String(),
+          'note': note.trim(),
+        })
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+  }
+
+  Future<void> deletePayment({
+    required String customerId,
+    required String paymentId,
+  }) async {
+    if (paymentId.trim().isEmpty) {
+      throw Exception('Payment ID is required to delete a payment.');
+    }
+
+    await userDatabase
+        .child('customers')
+        .child(customerId)
+        .child('payments')
+        .child(paymentId)
+        .remove()
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+  }
+
+  Future<void> updateRun({
+    required String customerId,
+    required String runId,
+    required DateTime date,
+    required DateTime startTime,
+    required DateTime endTime,
+    required int durationMinutes,
+    required double ratePerHour,
+    required double totalAmount,
+  }) async {
+    if (runId.trim().isEmpty) {
+      throw Exception('Run ID is required to update a run.');
+    }
+
+    await userDatabase
+        .child('customers')
+        .child(customerId)
+        .child('runs')
+        .child(runId)
+        .update({
+          'date': date.toIso8601String(),
+          'startTime': startTime.toIso8601String(),
+          'endTime': endTime.toIso8601String(),
+          'durationMinutes': durationMinutes,
+          'ratePerHour': ratePerHour,
+          'totalAmount': totalAmount,
+        })
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+  }
+
+  Future<void> deleteRun({
+    required String customerId,
+    required String runId,
+  }) async {
+    if (runId.trim().isEmpty) {
+      throw Exception('Run ID is required to delete a run.');
+    }
+
+    await userDatabase
+        .child('customers')
+        .child(customerId)
+        .child('runs')
+        .child(runId)
+        .remove()
         .timeout(
           const Duration(seconds: 15),
           onTimeout: () => throw TimeoutException(

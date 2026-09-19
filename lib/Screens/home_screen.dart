@@ -574,6 +574,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+
             drawer: Drawer(
               child: SafeArea(
                 child: Column(
