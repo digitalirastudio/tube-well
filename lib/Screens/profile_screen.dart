@@ -152,6 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final userUid = user.uid;
 
+      // Re-authenticate first if Firebase requires it.
       try {
         await user.delete();
       } on FirebaseAuthException catch (e) {
@@ -180,17 +181,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
 
           await user.reauthenticateWithCredential(credential);
-
-          // Try deleting Auth account again after reauthentication.
-          await user.delete();
         } else {
           rethrow;
         }
       }
 
+      // Delete all Realtime Database data while the user is
+      // still signed in.
       await DatabaseService().deleteUserData(userUid);
 
-      await FirebaseAuth.instance.signOut();
+      // Now delete the Firebase Auth account.
+      await user.delete();
 
       if (!mounted) return;
 
@@ -205,7 +206,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(getDeleteAccountErrorMessage(e))));
-    } catch (_) {
+    } catch (e) {
+      debugPrint('DELETE ACCOUNT ERROR: $e');
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(

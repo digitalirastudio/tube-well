@@ -380,12 +380,23 @@ class _HomeScreenState extends State<HomeScreen> {
         };
         _summaryLoading = false;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
 
       setState(() {
         _summaryLoading = false;
       });
+
+      if (context.mounted) {
+        final message =
+            error.toString().contains('The database did not respond')
+            ? 'Database did not respond. Check the Realtime Database URL and rules.'
+            : 'Unable to load data right now. Please check the Firebase database configuration.';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+        );
+      }
     }
   }
 
@@ -787,7 +798,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   const Text(
                                     'Keep track of your tube-well usage and payments.',
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 10,
                                       color: Color(0xFF123B5D),
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -797,8 +808,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(width: 8),
                             SizedBox(
-                              width: 250,
-                              height: 150,
+                              width: 150,
+                              height: 100,
                               child: Opacity(
                                 opacity: 0.94,
                                 child: Image.asset(
@@ -834,7 +845,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             const Icon(
                               Icons.calendar_month,
-                              size: 30,
+                              size: 23,
                               color: Color.fromARGB(255, 201, 232, 247),
                             ),
                             const SizedBox(width: 10),
@@ -906,7 +917,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       const Text(
                                         'Total Outstanding',
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           color: Colors.white,
                                           fontWeight: FontWeight.w600,
                                         ),

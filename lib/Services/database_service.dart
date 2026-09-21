@@ -1,10 +1,14 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class DatabaseService {
-  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+  final DatabaseReference _database = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL: 'https://tube-well-ef1b0-default-rtdb.asia-southeast1.firebasedatabase.app',
+  ).ref();
 
   DatabaseReference get database => _database;
 
