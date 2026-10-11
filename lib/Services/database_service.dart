@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class DatabaseService {
   final DatabaseReference _database = FirebaseDatabase.instanceFor(
@@ -22,6 +23,7 @@ class DatabaseService {
     return _database.child('users').child(user.uid);
   }
 
+  //Delete User Data
   Future<void> deleteUserData(String uid) async {
     if (uid.trim().isEmpty) {
       throw Exception('User ID is required.');
@@ -39,6 +41,7 @@ class DatabaseService {
         );
   }
 
+  // Add Customer
   Future<String> addCustomer({
     required String name,
     required String mobileNumber,
@@ -47,25 +50,66 @@ class DatabaseService {
   }) async {
     final customerRef = userDatabase.child('customers').push();
 
-    await customerRef
-        .set({
-          'name': name.trim(),
-          'mobileNumber': mobileNumber.trim(),
-          'ratePerHour': ratePerHour,
-          'note': note.trim(),
-          'createdAt': ServerValue.timestamp,
-        })
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
+    unawaited(
+      customerRef
+          .set({
+            'name': name.trim(),
+            'mobileNumber': mobileNumber.trim(),
+            'ratePerHour': ratePerHour,
+            'note': note.trim(),
+            'createdAt': ServerValue.timestamp,
+          })
+          .catchError((Object error) {
+            debugPrint('Customer save failed: $error');
+          }),
+    );
 
     return customerRef.key!;
   }
+  //add Customer method end
 
-  // Get one customer's information
+  // Update Customer
+  Future<void> updateCustomer({
+    required String customerId,
+    required String name,
+    required String mobileNumber,
+    required double ratePerHour,
+    required String note,
+  }) async {
+    final customerRef = userDatabase.child('customers').child(customerId);
+
+    unawaited(
+      customerRef
+          .update({
+            'name': name.trim(),
+            'mobileNumber': mobileNumber.trim(),
+            'ratePerHour': ratePerHour,
+            'note': note.trim(),
+          })
+          .catchError((Object error) {
+            debugPrint('Customer update failed: $error');
+          }),
+    );
+  }
+  //update Customer method end
+
+  // Delete Customer
+  Future<void> deleteCustomer({required String customerId}) async {
+    if (customerId.trim().isEmpty) {
+      throw Exception('Customer ID is required.');
+    }
+
+    final customerRef = userDatabase.child('customers').child(customerId);
+
+    unawaited(
+      customerRef.remove().catchError((Object error) {
+        debugPrint('Customer deletion failed: $error');
+      }),
+    );
+  }
+  //delete Customer method end
+
+  //Get Customer
   Future<Map<String, dynamic>> getCustomer(String customerId) async {
     final snapshot = await userDatabase
         .child('customers')
@@ -87,47 +131,7 @@ class DatabaseService {
     return data;
   }
 
-  Future<void> updateCustomer({
-    required String customerId,
-    required String name,
-    required String mobileNumber,
-    required double ratePerHour,
-    required String note,
-  }) async {
-    await userDatabase
-        .child('customers')
-        .child(customerId)
-        .update({
-          'name': name.trim(),
-          'mobileNumber': mobileNumber.trim(),
-          'ratePerHour': ratePerHour,
-          'note': note.trim(),
-        })
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-  }
-
-  Future<void> deleteCustomer({required String customerId}) async {
-    if (customerId.trim().isEmpty) {
-      throw Exception('Customer ID is required.');
-    }
-
-    await userDatabase
-        .child('customers')
-        .child(customerId)
-        .remove()
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-  }
-
+  //Get Customer Runs
   Future<List<Map<String, dynamic>>> getCustomerRuns(String customerId) async {
     final snapshot = await userDatabase
         .child('customers')
@@ -168,6 +172,7 @@ class DatabaseService {
     return runs;
   }
 
+  // Add Run
   Future<void> addRun({
     required String customerId,
     required DateTime date,
@@ -183,109 +188,25 @@ class DatabaseService {
         .child('runs')
         .push();
 
-    await runRef
-        .set({
-          'date': date.toIso8601String(),
-          'startTime': startTime.toIso8601String(),
-          'endTime': endTime.toIso8601String(),
-          'durationMinutes': durationMinutes,
-
-          // Save the rate used for this particular run.
-          // This means old runs won't change when the customer's
-          // current rate is updated later.
-          'ratePerHour': ratePerHour,
-
-          'totalAmount': totalAmount,
-          'createdAt': ServerValue.timestamp,
-        })
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
+    unawaited(
+      runRef
+          .set({
+            'date': date.toIso8601String(),
+            'startTime': startTime.toIso8601String(),
+            'endTime': endTime.toIso8601String(),
+            'durationMinutes': durationMinutes,
+            'ratePerHour': ratePerHour,
+            'totalAmount': totalAmount,
+            'createdAt': ServerValue.timestamp,
+          })
+          .catchError((Object error) {
+            debugPrint('Run save failed: $error');
+          }),
+    );
   }
+  //add Run method end
 
-  Future<void> addPayment({
-    required String customerId,
-    required String customerName,
-    required double amount,
-    required DateTime date,
-    required String note,
-  }) async {
-    final paymentRef = userDatabase
-        .child('customers')
-        .child(customerId)
-        .child('payments')
-        .push();
-
-    await paymentRef
-        .set({
-          'customerName': customerName.trim(),
-          'amount': amount,
-          'date': date.toIso8601String(),
-          'note': note.trim(),
-          'createdAt': ServerValue.timestamp,
-        })
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-  }
-
-  Future<void> updatePayment({
-    required String customerId,
-    required String paymentId,
-    required double amount,
-    required DateTime date,
-    required String note,
-  }) async {
-    if (paymentId.trim().isEmpty) {
-      throw Exception('Payment ID is required to update a payment.');
-    }
-
-    await userDatabase
-        .child('customers')
-        .child(customerId)
-        .child('payments')
-        .child(paymentId)
-        .update({
-          'amount': amount,
-          'date': date.toIso8601String(),
-          'note': note.trim(),
-        })
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-  }
-
-  Future<void> deletePayment({
-    required String customerId,
-    required String paymentId,
-  }) async {
-    if (paymentId.trim().isEmpty) {
-      throw Exception('Payment ID is required to delete a payment.');
-    }
-
-    await userDatabase
-        .child('customers')
-        .child(customerId)
-        .child('payments')
-        .child(paymentId)
-        .remove()
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-  }
-
+  // Update Run
   Future<void> updateRun({
     required String customerId,
     required String runId,
@@ -300,27 +221,30 @@ class DatabaseService {
       throw Exception('Run ID is required to update a run.');
     }
 
-    await userDatabase
+    final runRef = userDatabase
         .child('customers')
         .child(customerId)
         .child('runs')
-        .child(runId)
-        .update({
-          'date': date.toIso8601String(),
-          'startTime': startTime.toIso8601String(),
-          'endTime': endTime.toIso8601String(),
-          'durationMinutes': durationMinutes,
-          'ratePerHour': ratePerHour,
-          'totalAmount': totalAmount,
-        })
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-  }
+        .child(runId);
 
+    unawaited(
+      runRef
+          .update({
+            'date': date.toIso8601String(),
+            'startTime': startTime.toIso8601String(),
+            'endTime': endTime.toIso8601String(),
+            'durationMinutes': durationMinutes,
+            'ratePerHour': ratePerHour,
+            'totalAmount': totalAmount,
+          })
+          .catchError((Object error) {
+            debugPrint('Run update failed: $error');
+          }),
+    );
+  }
+  //update Run method end
+
+  // Delete Run
   Future<void> deleteRun({
     required String customerId,
     required String runId,
@@ -329,20 +253,106 @@ class DatabaseService {
       throw Exception('Run ID is required to delete a run.');
     }
 
-    await userDatabase
+    final runRef = userDatabase
         .child('customers')
         .child(customerId)
         .child('runs')
-        .child(runId)
-        .remove()
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-  }
+        .child(runId);
 
+    unawaited(
+      runRef.remove().catchError((Object error) {
+        debugPrint('Run deletion failed: $error');
+      }),
+    );
+  }
+  //delete Run method end
+
+  // Add Payment
+  Future<void> addPayment({
+    required String customerId,
+    required String customerName,
+    required double amount,
+    required DateTime date,
+    required String note,
+  }) async {
+    final paymentRef = userDatabase
+        .child('customers')
+        .child(customerId)
+        .child('payments')
+        .push();
+
+    unawaited(
+      paymentRef
+          .set({
+            'customerName': customerName.trim(),
+            'amount': amount,
+            'date': date.toIso8601String(),
+            'note': note.trim(),
+            'createdAt': ServerValue.timestamp,
+          })
+          .catchError((Object error) {
+            debugPrint('Payment save failed: $error');
+          }),
+    );
+  }
+  //add Payment method end
+
+  // Update Payment
+  Future<void> updatePayment({
+    required String customerId,
+    required String paymentId,
+    required double amount,
+    required DateTime date,
+    required String note,
+  }) async {
+    if (paymentId.trim().isEmpty) {
+      throw Exception('Payment ID is required to update a payment.');
+    }
+
+    final paymentRef = userDatabase
+        .child('customers')
+        .child(customerId)
+        .child('payments')
+        .child(paymentId);
+
+    unawaited(
+      paymentRef
+          .update({
+            'amount': amount,
+            'date': date.toIso8601String(),
+            'note': note.trim(),
+          })
+          .catchError((Object error) {
+            debugPrint('Payment update failed: $error');
+          }),
+    );
+  }
+  //update Payment method end
+
+  // Delete Payment
+  Future<void> deletePayment({
+    required String customerId,
+    required String paymentId,
+  }) async {
+    if (paymentId.trim().isEmpty) {
+      throw Exception('Payment ID is required to delete a payment.');
+    }
+
+    final paymentRef = userDatabase
+        .child('customers')
+        .child(customerId)
+        .child('payments')
+        .child(paymentId);
+
+    unawaited(
+      paymentRef.remove().catchError((Object error) {
+        debugPrint('Payment deletion failed: $error');
+      }),
+    );
+  }
+  //delete Payment method end
+
+  //Test Database Connection
   Future<void> testDatabaseConnection() async {
     final userDatabase = this.userDatabase;
 
@@ -352,6 +362,7 @@ class DatabaseService {
     });
   }
 
+  // check customer existence
   Future<List<Map<String, dynamic>>> getCustomerPayments(
     String customerId,
   ) async {
@@ -427,8 +438,6 @@ class DatabaseService {
           totalRuns += (runData['totalAmount'] as num?)?.toDouble() ?? 0;
         }
       }
-
-      // Calculate total payments
       if (customer['payments'] != null) {
         final payments = Map<String, dynamic>.from(customer['payments'] as Map);
 
@@ -459,6 +468,9 @@ class DatabaseService {
     return customers;
   }
 
+  //This method calculates the summary of the current month,
+  // including outstanding amounts, number of people with outstanding balances,
+  // usage records, and payment records.
   Future<Map<String, dynamic>> getThisMonthSummary() async {
     final snapshot = await userDatabase
         .child('customers')
@@ -501,9 +513,6 @@ class DatabaseService {
       double customerRuns = 0;
       double customerPayments = 0;
 
-      // -------------------------
-      // THIS MONTH'S RUNS
-      // -------------------------
       final runsData = customer['runs'];
 
       if (runsData != null) {
@@ -526,9 +535,6 @@ class DatabaseService {
         }
       }
 
-      // -------------------------
-      // THIS MONTH'S PAYMENTS
-      // -------------------------
       final paymentsData = customer['payments'];
 
       if (paymentsData != null) {
@@ -551,7 +557,6 @@ class DatabaseService {
         }
       }
 
-      // This customer's remaining amount
       final customerOutstanding = customerRuns - customerPayments;
 
       if (customerOutstanding > 0) {
@@ -568,7 +573,9 @@ class DatabaseService {
       'payments': paymentRecords,
     };
   }
+  //this month method end
 
+  //Get All Transactions
   Future<List<Map<String, dynamic>>> getAllTransactions() async {
     final snapshot = await userDatabase
         .child('customers')
@@ -595,9 +602,6 @@ class DatabaseService {
 
       final customerName = customer['name']?.toString() ?? 'Unknown Customer';
 
-      // -------------------------
-      // RUNS
-      // -------------------------
       final runsData = customer['runs'];
 
       if (runsData != null) {
@@ -629,9 +633,6 @@ class DatabaseService {
         }
       }
 
-      // -------------------------
-      // PAYMENTS
-      // -------------------------
       final paymentsData = customer['payments'];
 
       if (paymentsData != null) {
@@ -665,7 +666,6 @@ class DatabaseService {
       }
     }
 
-    // Newest transactions first
     transactions.sort((a, b) {
       final aDate = a['date'] as DateTime;
       final bDate = b['date'] as DateTime;
@@ -675,4 +675,5 @@ class DatabaseService {
 
     return transactions;
   }
+  //get All Transactions method end
 }
