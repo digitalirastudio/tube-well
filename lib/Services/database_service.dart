@@ -109,69 +109,6 @@ class DatabaseService {
   }
   //delete Customer method end
 
-  //Get Customer
-  Future<Map<String, dynamic>> getCustomer(String customerId) async {
-    final snapshot = await userDatabase
-        .child('customers')
-        .child(customerId)
-        .get()
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-
-    if (!snapshot.exists || snapshot.value == null) {
-      throw Exception('Customer not found.');
-    }
-
-    final data = Map<String, dynamic>.from(snapshot.value as Map);
-
-    return data;
-  }
-
-  //Get Customer Runs
-  Future<List<Map<String, dynamic>>> getCustomerRuns(String customerId) async {
-    final snapshot = await userDatabase
-        .child('customers')
-        .child(customerId)
-        .child('runs')
-        .get()
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
-
-    if (!snapshot.exists || snapshot.value == null) {
-      return [];
-    }
-
-    final data = Map<String, dynamic>.from(snapshot.value as Map);
-
-    final runs = data.entries.map((entry) {
-      final run = Map<String, dynamic>.from(entry.value as Map);
-
-      run['id'] = entry.key;
-
-      return run;
-    }).toList();
-
-    runs.sort((a, b) {
-      final aDate =
-          DateTime.tryParse(a['date']?.toString() ?? '') ?? DateTime(1970);
-
-      final bDate =
-          DateTime.tryParse(b['date']?.toString() ?? '') ?? DateTime(1970);
-
-      return bDate.compareTo(aDate);
-    });
-
-    return runs;
-  }
-
   // Add Run
   Future<void> addRun({
     required String customerId,
@@ -362,7 +299,72 @@ class DatabaseService {
     });
   }
 
-  // check customer existence
+  //Get Customer
+  Future<Map<String, dynamic>> getCustomer(String customerId) async {
+    final snapshot = await userDatabase
+        .child('customers')
+        .child(customerId)
+        .get()
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+
+    if (!snapshot.exists || snapshot.value == null) {
+      throw Exception('Customer not found.');
+    }
+
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+
+    return data;
+  }
+  //get Customer method end
+
+  //Get Customer Runs
+  Future<List<Map<String, dynamic>>> getCustomerRuns(String customerId) async {
+    final snapshot = await userDatabase
+        .child('customers')
+        .child(customerId)
+        .child('runs')
+        .get()
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException(
+            'The database did not respond. Check the Realtime Database URL and rules.',
+          ),
+        );
+
+    if (!snapshot.exists || snapshot.value == null) {
+      return [];
+    }
+
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+
+    final runs = data.entries.map((entry) {
+      final run = Map<String, dynamic>.from(entry.value as Map);
+
+      run['id'] = entry.key;
+
+      return run;
+    }).toList();
+
+    runs.sort((a, b) {
+      final aDate =
+          DateTime.tryParse(a['date']?.toString() ?? '') ?? DateTime(1970);
+
+      final bDate =
+          DateTime.tryParse(b['date']?.toString() ?? '') ?? DateTime(1970);
+
+      return bDate.compareTo(aDate);
+    });
+
+    return runs;
+  }
+  //get Customer Runs method end
+
+  // get Customer Payments
   Future<List<Map<String, dynamic>>> getCustomerPayments(
     String customerId,
   ) async {
@@ -402,17 +404,11 @@ class DatabaseService {
 
     return payments;
   }
+  //get Customer Payments method end
 
+  // Get All Customers
   Future<List<Map<String, dynamic>>> getCustomers() async {
-    final snapshot = await userDatabase
-        .child('customers')
-        .get()
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
+    final snapshot = await userDatabase.child('customers').get();
 
     if (!snapshot.exists || snapshot.value == null) {
       return [];
@@ -471,16 +467,9 @@ class DatabaseService {
   //This method calculates the summary of the current month,
   // including outstanding amounts, number of people with outstanding balances,
   // usage records, and payment records.
+
   Future<Map<String, dynamic>> getThisMonthSummary() async {
-    final snapshot = await userDatabase
-        .child('customers')
-        .get()
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException(
-            'The database did not respond. Check the Realtime Database URL and rules.',
-          ),
-        );
+    final snapshot = await userDatabase.child('customers').get();
 
     if (!snapshot.exists || snapshot.value == null) {
       return {

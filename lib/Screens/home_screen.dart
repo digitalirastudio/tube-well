@@ -278,6 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  //Load  summaryfor this month card
   Future<void> _loadSummaryForRange(String range) async {
     setState(() {
       _summaryLoading = true;
@@ -399,12 +400,14 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
+  //end of summaryfor this month card
 
+  //search controller and search state
   final TextEditingController _searchController = TextEditingController();
   bool _isSearchOpen = false;
   int _selectedTab = 0;
   String selectedRange = 'This Month';
-
+  //end of search controller and search state
   @override
   void dispose() {
     _searchController.dispose();
@@ -740,6 +743,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
+                      // this is the greeting container on home screen
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -821,7 +825,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
+                      //end of greeting container on home screen
+
                       const SizedBox(height: 24),
+
+                      // this is the summary container on home screen
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -936,16 +944,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ],
                                   ),
                                   const Spacer(),
+                                  //vertical divider
                                   Container(
                                     width: 1,
                                     height: 90,
                                     color: Colors.white.withValues(alpha: 0.35),
                                   ),
                                   const SizedBox(width: 18),
+                                  //second container on home screen half part
                                   Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      //people count
                                       Row(
                                         children: [
                                           const Icon(
@@ -970,6 +981,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ],
                                       ),
                                       const SizedBox(height: 10),
+                                      //usage records row
                                       Row(
                                         children: [
                                           const Icon(
@@ -994,6 +1006,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ],
                                       ),
                                       const SizedBox(height: 10),
+                                      //payments row
                                       Row(
                                         children: [
                                           const Icon(
@@ -1025,7 +1038,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
+                      //end of summary container on home screen
+
                       const SizedBox(height: 12),
+
+                      //people and view all option
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Row(
@@ -1073,7 +1090,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
+                      //end of people and view all option
+
                       const SizedBox(height: 12),
+                      //customer tile data
                       StreamBuilder<DatabaseEvent>(
                         stream: DatabaseService().userDatabase
                             .child('customers')
@@ -1163,7 +1183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             );
                           }
-
+                          //customer tile column data
                           return Column(
                             children: filteredCustomers.map((entry) {
                               final customerId = entry.key;
@@ -1213,7 +1233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               final owed = totalRuns - totalPayments;
                               final finalOwed = owed > 0 ? owed : 0;
                               final isOwed = finalOwed > 0;
-
+                              // customer tile
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: Container(
@@ -1262,6 +1282,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+
+            //floating action button
             floatingActionButton: FloatingActionButton(
               onPressed: () {
                 Navigator.push(
@@ -1278,6 +1300,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(Icons.add, size: 30),
             ),
             floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+            //floating action button end here
+
+            //bottom navigation bar
             bottomNavigationBar: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
@@ -1374,6 +1399,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+
+            //bottom navigation bar method end here
           );
         },
       ),
