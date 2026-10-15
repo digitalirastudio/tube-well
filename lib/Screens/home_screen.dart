@@ -10,6 +10,8 @@ import 'package:tube_well/Services/database_service.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:tube_well/Screens/customers_screen.dart';
 
+import 'dart:async';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -257,6 +259,7 @@ class _BottomNavItem extends StatelessWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  StreamSubscription<DatabaseEvent>? _customersSubscription;
   final DatabaseService _databaseService = DatabaseService();
 
   Map<String, dynamic> _summary = {
@@ -267,25 +270,64 @@ class _HomeScreenState extends State<HomeScreen> {
   };
 
   bool _summaryLoading = true;
-
+  Object? _cachedCustomersData;
+  bool _hasLoadedCustomerData = false;
+  @override
   @override
   void initState() {
     super.initState();
-    _loadSummaryForRange(selectedRange);
-    _databaseService.userDatabase.child('customers').onValue.listen((_) {
-      if (!mounted) return;
-      _loadSummaryForRange(selectedRange);
-    });
+
+    _customersSubscription = _databaseService.userDatabase
+        .child('customers')
+        .onValue
+        .listen((event) {
+          if (!mounted) return;
+
+          _cachedCustomersData = event.snapshot.value;
+          _hasLoadedCustomerData = true;
+
+          _loadSummaryForRange(selectedRange);
+        });
   }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _loadSummaryForRange(selectedRange);
+  //   _databaseService.userDatabase.child('customers').onValue.listen((_) {
+  //     if (!mounted) return;
+  //     _loadSummaryForRange(selectedRange);
+  //   });
+  // }
 
   //Load  summaryfor this month card
   Future<void> _loadSummaryForRange(String range) async {
-    setState(() {
-      _summaryLoading = true;
-    });
+    if (!_hasLoadedCustomerData) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _summaryLoading = true;
+      });
+    }
 
     try {
-      final customers = await _databaseService.getCustomers();
+      final rawData = _cachedCustomersData;
+
+      final data = rawData is Map
+          ? Map<String, dynamic>.from(rawData)
+          : <String, dynamic>{};
+
+      final customers = <Map<String, dynamic>>[];
+
+      for (final entry in data.entries) {
+        if (entry.value is! Map) continue;
+
+        final customer = Map<String, dynamic>.from(entry.value as Map);
+
+        customer['id'] = entry.key;
+        customers.add(customer);
+      }
 
       if (!mounted) return;
 
@@ -409,7 +451,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String selectedRange = 'This Month';
   //end of search controller and search state
   @override
+  @override
   void dispose() {
+    _customersSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
